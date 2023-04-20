@@ -66,7 +66,7 @@ SELECTED_THEME_KEY = 'selectedTheme'
 """
 TODO ... 
 
-1. Deal with user entering model name (ie: text entry). 
+DONE **** 1. Deal with user entering model name (ie: text entry). 
 
 Currently no hook into return/enter key so settings aren't saved
 again until you change another UI setting or click cancel/train.
@@ -218,6 +218,7 @@ class _TUI(ttk.Frame):
         
         self.modelNameEntry = ttk.Entry( self.outputFrame, textvariable=self.modelName, width=PATH_LABEL_LENGTH )
         self.modelNameEntry.grid( row=1, column=1, columnspan=2, padx=10, pady=10, sticky="ew" )
+        self.modelNameEntry.bind('<FocusOut>', self.modelNameEntryCallback)
         
         
     def _createOptionsFrame(self):
@@ -325,6 +326,11 @@ class _TUI(ttk.Frame):
     def archCallback(self, value):
         if DEBUG: print("archCallback: " + self.archCombo.get())
         self._saveSettings()
+
+    def modelNameEntryCallback(self, value):
+        if DEBUG: print("modelNameEntryCallback: " + self.modelName.get())
+        self._saveSettings()
+
 
     def _train(self):
         # TODO... implement multi-file training
