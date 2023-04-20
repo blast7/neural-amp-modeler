@@ -66,31 +66,21 @@ SELECTED_THEME_KEY = 'selectedTheme'
 """
 TODO ... 
 
-DONE **** 1. Deal with user entering model name (ie: text entry). 
-
-Currently no hook into return/enter key so settings aren't saved
-again until you change another UI setting or click cancel/train.
-
-2. Also need to tie a hook into closing the window via the "X" in the window header in order to save settings
-    when closing via this UI mechanism
-
-3. More graceful config file parsing. right now we abort if the config file isn't exactly what we are expecting
-
-4. Multi-file selection and training
+1. Multi-file selection and training
 
 """
 
-class _TUI(ttk.Frame):
-    
-    def __init__(self, parent):
-        ttk.Frame.__init__(self)
-        
-        config_path = CONFIG_FILE_NAME
-        if os.path.exists(config_path):
-            with open(config_path) as data_file:
-                data_loaded = json.load(data_file)
-        else:
-            data_loaded = {
+class ConfigParser:
+
+    def __init__(self, file):
+        print(str(file))
+        self.configFile = file
+        if os.path.exists(self.configFile):
+            with open(self.configFile) as data_file:
+                self.data_loaded = json.load(data_file)
+
+    def getConfig(self):
+        config = {
                 SILENT_RUN_KEY: False,
                 SAVE_PLOT_KEY: True,
                 TRAINING_EPOCHS_KEY: 100,
@@ -98,11 +88,77 @@ class _TUI(ttk.Frame):
                 MODEL_NAME_KEY: "model.nam",
                 OUTPUT_FOLDER_KEY: "",
                 INPUT_SOURCE_FILE_KEY: "",
-                SELECTED_ARCH_KEY: core.Architecture.FEATHER,
+                SELECTED_ARCH_KEY: core.Architecture.FEATHER.value,
                 CAPTURE_FOLDER_KEY: "",
                 SELECTED_AMP_CAPTURE_KEY: "",
                 SELECTED_THEME_KEY: ""
             }
+        if os.path.exists(self.configFile):
+            try:
+                config[SILENT_RUN_KEY] = self.data_loaded[SILENT_RUN_KEY]
+            except:
+                print("ERROR: unable to read silent run from config file! default value: " + config[SILENT_RUN_KEY])
+
+            try:
+                config[SAVE_PLOT_KEY] = self.data_loaded[SAVE_PLOT_KEY]
+            except:
+                print("ERROR: unable to read save plot from config file! default value: " + config[SAVE_PLOT_KEY])
+
+            try:
+                config[TRAINING_EPOCHS_KEY] = self.data_loaded[TRAINING_EPOCHS_KEY]
+            except:
+                print("ERROR: unable to read trainging epochs from config file! default value: " + config[TRAINING_EPOCHS_KEY])
+
+            try:
+                config[DELAY_KEY] = self.data_loaded[DELAY_KEY]
+            except:
+                print("ERROR: unable to read delay from config file! default value: " + config[DELAY_KEY])
+
+            try:
+                config[MODEL_NAME_KEY] = self.data_loaded[MODEL_NAME_KEY]
+            except:
+                print("ERROR: unable to read model name from config file! default value: " + config[MODEL_NAME_KEY])
+
+            try:
+                config[OUTPUT_FOLDER_KEY] = self.data_loaded[OUTPUT_FOLDER_KEY]
+            except:
+                print("ERROR: unable to read output folder from config file! default value: " + config[OUTPUT_FOLDER_KEY])
+
+            try:
+                config[INPUT_SOURCE_FILE_KEY] = self.data_loaded[INPUT_SOURCE_FILE_KEY]
+            except:
+                print("ERROR: unable to read input source file from config file! default value: " + config[INPUT_SOURCE_FILE_KEY])
+
+            try:
+                config[SELECTED_ARCH_KEY] = self.data_loaded[SELECTED_ARCH_KEY]
+            except:
+                print("ERROR: unable to read selected architecture from config file! default value: " + config[SELECTED_ARCH_KEY])
+
+            try:
+                config[CAPTURE_FOLDER_KEY] = self.data_loaded[CAPTURE_FOLDER_KEY]
+            except:
+                print("ERROR: unable to read capture folder from config file! default value: " + config[CAPTURE_FOLDER_KEY])
+
+            try:
+                config[SELECTED_AMP_CAPTURE_KEY] = self.data_loaded[SELECTED_AMP_CAPTURE_KEY]
+            except:
+                print("ERROR: unable to read selected capture from config file! default value: " + config[SELECTED_AMP_CAPTURE_KEY])
+
+            try:
+                config[SELECTED_THEME_KEY] = self.data_loaded[SELECTED_THEME_KEY]
+            except:
+                print("ERROR: unable to read selected theme from config file! default value: " + config[SELECTED_THEME_KEY])
+        
+        return config
+
+
+class _TUI(ttk.Frame):
+    
+    def __init__(self, parent):
+        ttk.Frame.__init__(self)
+        
+        config = ConfigParser(CONFIG_FILE_NAME)
+        data_loaded = config.getConfig()
         
         self.silentrun = tk.BooleanVar(value=data_loaded[SILENT_RUN_KEY])
         self.saveplot = tk.BooleanVar(value=data_loaded[SAVE_PLOT_KEY])
