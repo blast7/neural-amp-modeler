@@ -275,7 +275,7 @@ class _TUI(ttk.Frame):
         self.executeFrame.columnconfigure( index=4, weight=1 )
         self.executeFrame.columnconfigure( index=5, weight=1 )
         
-        self.cancelButton = ttk.Button( self.executeFrame, text="Close", command=self.cancelCallback, width=1 )
+        self.cancelButton = ttk.Button( self.executeFrame, text="Close", command=self.closeCallback, width=1 )
         self.cancelButton.grid( row=0, column=4, padx=10, pady=10, sticky="nsew" )
         
         self.trainButton = ttk.Button( self.executeFrame, text="Train", command=self.trainCallback, width=1 )
@@ -331,6 +331,9 @@ class _TUI(ttk.Frame):
         if DEBUG: print("modelNameEntryCallback: " + self.modelName.get())
         self._saveSettings()
 
+    def windowClosingCallback(self):
+        if DEBUG: print("windowClosingCallback:")
+        self.closeCallback()
 
     def _train(self):
         # TODO... implement multi-file training
@@ -396,7 +399,8 @@ class _TUI(ttk.Frame):
         else:
             self._train()
         
-    def cancelCallback(self):
+    def closeCallback(self):
+        if DEBUG: print("closeCallback")
         self._saveSettings()
         # close the window programatically
         self.destroy()
@@ -486,6 +490,8 @@ def run():
         x_cordinate = int((root.winfo_screenwidth() / 2) - (root.winfo_width() / 2))
         y_cordinate = int((root.winfo_screenheight() / 2) - (root.winfo_height() / 2))
         root.geometry("+{}+{}".format(x_cordinate, y_cordinate-20))
+
+        root.protocol("WM_DELETE_WINDOW", app.windowClosingCallback)
 
         root.mainloop()
     else:
