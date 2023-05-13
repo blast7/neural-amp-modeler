@@ -1,4 +1,4 @@
-# File: __init__.py
+# File: gui.py
 # Created Date: Saturday February 25th 2023
 # Author: Steven Atkinson (steven@atkinson.mn)
 
@@ -9,6 +9,7 @@ Usage:
 >>> from nam.train.gui import run
 >>> run()
 """
+
 
 # Hack to recover graceful shutdowns in Windows.
 # This has to happen ASAP
@@ -28,23 +29,42 @@ import re
 import tkinter as tk
 from dataclasses import dataclass
 from enum import Enum
+from functools import partial
 from pathlib import Path
 from tkinter import filedialog
 from typing import Callable, Optional, Sequence
 
 try:
+    import torch
+
     from nam import __version__
     from nam.train import core
+    from nam.models.metadata import GearType, UserMetadata, ToneType
 
     _install_is_valid = True
+    _HAVE_ACCELERATOR = torch.cuda.is_available() or torch.backends.mps.is_available()
 except ImportError:
     _install_is_valid = False
+    _HAVE_ACCELERATOR = False
+
+if _HAVE_ACCELERATOR:
+    _DEFAULT_NUM_EPOCHS = 100
+    _DEFAULT_BATCH_SIZE = 16
+    _DEFAULT_LR_DECAY = 0.007
+else:
+    _DEFAULT_NUM_EPOCHS = 20
+    _DEFAULT_BATCH_SIZE = 1
+    _DEFAULT_LR_DECAY = 0.05
 _BUTTON_WIDTH = 20
 _BUTTON_HEIGHT = 2
 _TEXT_WIDTH = 70
 
-_DEFAULT_NUM_EPOCHS = 100
 _DEFAULT_DELAY = None
+_DEFAULT_IGNORE_CHECKS = False
+
+_ADVANCED_OPTIONS_LEFT_WIDTH = 12
+_ADVANCED_OPTIONS_RIGHT_WIDTH = 12
+_METADATA_RIGHT_WIDTH = 60
 
 
 @dataclass
@@ -52,6 +72,7 @@ class _AdvancedOptions(object):
     architecture: core.Architecture
     num_epochs: int
     delay: Optional[int]
+    ignore_checks: bool
 
 
 class _PathType(Enum):
@@ -68,11 +89,12 @@ class _PathButton(object):
     def __init__(
         self,
         frame: tk.Frame,
-        button_text,
+        button_text: str,
         info_str: str,
         path_type: _PathType,
         hooks: Optional[Sequence[Callable[[], None]]] = None,
     ):
+        self._button_text = button_text
         self._info_str = info_str
         self._path: Optional[Path] = None
         self._path_type = path_type
@@ -104,12 +126,12 @@ class _PathButton(object):
     def _set_text(self):
         if self._path is None:
             self._label["fg"] = "red"
-            self._label["text"] = f"{self._info_str} is not set!"
+            self._label["text"] = self._info_str
         else:
             val = self.val
             val = val[0] if isinstance(val, tuple) and len(val) == 1 else val
             self._label["fg"] = "black"
-            self._label["text"] = f"{self._info_str} set to {val}"
+            self._label["text"] = f"{self._button_text.capitalize()} set to {val}"
 
     def _set_val(self):
         res = {
@@ -137,7 +159,7 @@ class _GUI(object):
         self._path_button_input = _PathButton(
             self._frame_input_path,
             "Input Audio",
-            "Input audio",
+            "Select input DI file (eg: v1_1_1.wav)",
             _PathType.FILE,
             hooks=[self._check_button_states],
         )
@@ -147,7 +169,7 @@ class _GUI(object):
         self._path_button_output = _PathButton(
             self._frame_output_path,
             "Output Audio",
-            "Output audio",
+            "Select output (reamped) audio - choose multiple files to enable batch training",
             _PathType.MULTIFILE,
             hooks=[self._check_button_states],
         )
@@ -157,10 +179,25 @@ class _GUI(object):
         self._path_button_train_destination = _PathButton(
             self._frame_train_destination,
             "Train Destination",
-            "Train destination",
+            "Select training output directory",
             _PathType.DIRECTORY,
             hooks=[self._check_button_states],
         )
+
+        # Metadata
+        self.user_metadata = UserMetadata()
+        self._frame_metadata = tk.Frame(self._root)
+        self._frame_metadata.pack()
+        self._button_metadata = tk.Button(
+            self._frame_metadata,
+            text="Metadata...",
+            width=_BUTTON_WIDTH,
+            height=_BUTTON_HEIGHT,
+            fg="black",
+            command=self._open_metadata,
+        )
+        self._button_metadata.pack()
+        self.user_metadata_flag = False
 
         # This should probably be to the right somewhere
         self._get_additional_options_frame()
@@ -168,7 +205,10 @@ class _GUI(object):
         # Advanced options for training
         default_architecture = core.Architecture.STANDARD
         self.advanced_options = _AdvancedOptions(
-            default_architecture, _DEFAULT_NUM_EPOCHS, _DEFAULT_DELAY
+            default_architecture,
+            _DEFAULT_NUM_EPOCHS,
+            _DEFAULT_DELAY,
+            _DEFAULT_IGNORE_CHECKS,
         )
         # Window to edit them:
         self._frame_advanced_options = tk.Frame(self._root)
@@ -198,6 +238,23 @@ class _GUI(object):
 
         self._check_button_states()
 
+    def _check_button_states(self):
+        """
+        Determine if any buttons should be disabled
+        """
+        # Train button is disabled unless all paths are set
+        if any(
+            pb.val is None
+            for pb in (
+                self._path_button_input,
+                self._path_button_output,
+                self._path_button_train_destination,
+            )
+        ):
+            self._button_train["state"] = tk.DISABLED
+            return
+        self._button_train["state"] = tk.NORMAL
+
     def _get_additional_options_frame(self):
         # Checkboxes
         self._frame_silent = tk.Frame(self._root)
@@ -207,7 +264,7 @@ class _GUI(object):
         self._silent = tk.BooleanVar()
         self._chkbox_silent = tk.Checkbutton(
             self._frame_silent,
-            text="Silent run",
+            text="Silent run (suggested for batch training)",
             variable=self._silent,
         )
         self._chkbox_silent.grid(row=1, column=1, sticky="W")
@@ -217,10 +274,20 @@ class _GUI(object):
         self._save_plot.set(True)  # default this to true
         self._chkbox_save_plot = tk.Checkbutton(
             self._frame_silent,
-            text="Save plot automatically",
+            text="Save ESR plot automatically",
             variable=self._save_plot,
         )
         self._chkbox_save_plot.grid(row=2, column=1, sticky="W")
+
+        # Skip the data quality checks!
+        self._ignore_checks = tk.BooleanVar()
+        self._ignore_checks.set(False)
+        self._chkbox_ignore_checks = tk.Checkbutton(
+            self._frame_silent,
+            text="Ignore data quality checks (DO AT YOUR OWN RISK!)",
+            variable=self._ignore_checks,
+        )
+        self._chkbox_ignore_checks.grid(row=3, column=1, sticky="W")
 
     def mainloop(self):
         self._root.mainloop()
@@ -234,6 +301,14 @@ class _GUI(object):
         ao.mainloop()
         # ...and then re-enable it once it gets closed.
 
+    def _open_metadata(self):
+        """
+        Open dialog for metadata
+        """
+        mdata = _UserMetadataGUI(self)
+        # I should probably disable the main GUI...
+        mdata.mainloop()
+
     def _train(self):
         # Advanced options:
         num_epochs = self.advanced_options.num_epochs
@@ -245,13 +320,14 @@ class _GUI(object):
         # If you're poking around looking for these, then maybe it's time to learn to
         # use the command-line scripts ;)
         lr = 0.004
-        lr_decay = 0.007
+        lr_decay = _DEFAULT_LR_DECAY
+        batch_size = _DEFAULT_BATCH_SIZE
         seed = 0
 
         # Run it
         for file in file_list:
             print("Now training {}".format(file))
-            modelname = re.sub(r"\.wav$", "", file.split("/")[-1])
+            basename = re.sub(r"\.wav$", "", file.split("/")[-1])
 
             trained_model = core.train(
                 self._path_button_input.val,
@@ -260,40 +336,58 @@ class _GUI(object):
                 epochs=num_epochs,
                 delay=delay,
                 architecture=architecture,
+                batch_size=batch_size,
                 lr=lr,
                 lr_decay=lr_decay,
                 seed=seed,
                 silent=self._silent.get(),
                 save_plot=self._save_plot.get(),
-                modelname=modelname,
+                modelname=basename,
+                ignore_checks=self._ignore_checks.get(),
+                local=True,
             )
+            if trained_model is None:
+                print("Model training failed! Skip exporting...")
+                continue
             print("Model training complete!")
             print("Exporting...")
             outdir = self._path_button_train_destination.val
             print(f"Exporting trained model to {outdir}...")
-            trained_model.net.export(outdir, modelname=modelname)
+            trained_model.net.export(
+                outdir,
+                basename=basename,
+                user_metadata=self.user_metadata
+                if self.user_metadata_flag
+                else UserMetadata(),
+            )
             print("Done!")
 
-    def _check_button_states(self):
-        """
-        Determine if any buttons should be disabled
-        """
-        # Train button is diabled unless all paths are set
-        if any(
-            pb.val is None
-            for pb in (
-                self._path_button_input,
-                self._path_button_output,
-                self._path_button_train_destination,
-            )
-        ):
-            self._button_train["state"] = tk.DISABLED
-            return
-        self._button_train["state"] = tk.NORMAL
+        # Metadata was only valid for 1 run, so make sure it's not used again unless
+        # the user re-visits the window and clicks "ok"
+        self.user_metadata_flag = False
 
 
-_ADVANCED_OPTIONS_LEFT_WIDTH = 12
-_ADVANCED_OPTIONS_RIGHT_WIDTH = 12
+# some typing functions
+def _non_negative_int(val):
+    val = int(val)
+    if val < 0:
+        val = 0
+    return val
+
+
+def _int_or_null(val):
+    val = val.rstrip()
+    if val == "null":
+        return val
+    return int(val)
+
+
+def _int_or_null_inv(val):
+    return "null" if val is None else str(val)
+
+
+def _rstripped_str(val):
+    return str(val).rstrip()
 
 
 class _LabeledOptionMenu(object):
@@ -356,7 +450,15 @@ class _LabeledText(object):
     Label (left) and text input (right)
     """
 
-    def __init__(self, frame: tk.Frame, label: str, default=None, type=None):
+    def __init__(
+        self,
+        frame: tk.Frame,
+        label: str,
+        default=None,
+        type=None,
+        left_width=_ADVANCED_OPTIONS_LEFT_WIDTH,
+        right_width=_ADVANCED_OPTIONS_RIGHT_WIDTH,
+    ):
         """
         :param command: Called to propagate option selection. Is provided with the
             value corresponding to the radio button selected.
@@ -367,7 +469,7 @@ class _LabeledText(object):
         text_height = 1
         self._label = tk.Label(
             frame,
-            width=_ADVANCED_OPTIONS_LEFT_WIDTH,
+            width=left_width,
             height=label_height,
             fg="black",
             bg=None,
@@ -378,7 +480,7 @@ class _LabeledText(object):
 
         self._text = tk.Text(
             frame,
-            width=_ADVANCED_OPTIONS_RIGHT_WIDTH,
+            width=right_width,
             height=text_height,
             fg="black",
             bg=None,
@@ -424,37 +526,22 @@ class _AdvancedOptionsGUI(object):
         self._frame_epochs = tk.Frame(self._root)
         self._frame_epochs.pack()
 
-        def non_negative_int(val):
-            val = int(val)
-            if val < 0:
-                val = 0
-            return val
-
         self._epochs = _LabeledText(
             self._frame_epochs,
             "Epochs",
             default=str(self._parent.advanced_options.num_epochs),
-            type=non_negative_int,
+            type=_non_negative_int,
         )
 
         # Delay: text box
         self._frame_delay = tk.Frame(self._root)
         self._frame_delay.pack()
 
-        def int_or_null(val):
-            val = val.rstrip()
-            if val == "null":
-                return val
-            return int(val)
-
-        def int_or_null_inv(val):
-            return "null" if val is None else str(val)
-
         self._delay = _LabeledText(
             self._frame_delay,
             "Delay",
-            default=int_or_null_inv(self._parent.advanced_options.delay),
-            type=int_or_null,
+            default=_int_or_null_inv(self._parent.advanced_options.delay),
+            type=_int_or_null,
         )
 
         # "Ok": apply and destory
@@ -485,6 +572,103 @@ class _AdvancedOptionsGUI(object):
         # Value None is returned as "null" to disambiguate from non-set.
         if delay is not None:
             self._parent.advanced_options.delay = None if delay == "null" else delay
+        self._root.destroy()
+
+
+class _UserMetadataGUI(object):
+    # Things that are auto-filled:
+    # Model date
+    # gain
+    def __init__(self, parent: _GUI):
+        self._parent = parent
+        self._root = tk.Tk()
+        self._root.title("Metadata")
+
+        LabeledText = partial(_LabeledText, right_width=_METADATA_RIGHT_WIDTH)
+
+        # Name
+        self._frame_name = tk.Frame(self._root)
+        self._frame_name.pack()
+        self._name = LabeledText(
+            self._frame_name,
+            "NAM name",
+            default=parent.user_metadata.name,
+            type=_rstripped_str,
+        )
+        # Modeled by
+        self._frame_modeled_by = tk.Frame(self._root)
+        self._frame_modeled_by.pack()
+        self._modeled_by = LabeledText(
+            self._frame_modeled_by,
+            "Modeled by",
+            default=parent.user_metadata.modeled_by,
+            type=_rstripped_str,
+        )
+        # Gear make
+        self._frame_gear_make = tk.Frame(self._root)
+        self._frame_gear_make.pack()
+        self._gear_make = LabeledText(
+            self._frame_gear_make,
+            "Gear make",
+            default=parent.user_metadata.gear_make,
+            type=_rstripped_str,
+        )
+        # Gear model
+        self._frame_gear_model = tk.Frame(self._root)
+        self._frame_gear_model.pack()
+        self._gear_model = LabeledText(
+            self._frame_gear_model,
+            "Gear model",
+            default=parent.user_metadata.gear_model,
+            type=_rstripped_str,
+        )
+        # Gear type
+        self._frame_gear_type = tk.Frame(self._root)
+        self._frame_gear_type.pack()
+        self._gear_type = _LabeledOptionMenu(
+            self._frame_gear_type,
+            "Gear type",
+            GearType,
+            default=parent.user_metadata.gear_type,
+        )
+        # Tone type
+        self._frame_tone_type = tk.Frame(self._root)
+        self._frame_tone_type.pack()
+        self._tone_type = _LabeledOptionMenu(
+            self._frame_tone_type,
+            "Tone type",
+            ToneType,
+            default=parent.user_metadata.tone_type,
+        )
+
+        # "Ok": apply and destory
+        self._frame_ok = tk.Frame(self._root)
+        self._frame_ok.pack()
+        self._button_ok = tk.Button(
+            self._frame_ok,
+            text="Ok",
+            width=_BUTTON_WIDTH,
+            height=_BUTTON_HEIGHT,
+            fg="black",
+            command=self._apply_and_destroy,
+        )
+        self._button_ok.pack()
+
+    def mainloop(self):
+        self._root.mainloop()
+
+    def _apply_and_destroy(self):
+        """
+        Set values to parent and destroy this object
+        """
+        self._parent.user_metadata.name = self._name.get()
+        self._parent.user_metadata.modeled_by = self._modeled_by.get()
+        self._parent.user_metadata.gear_make = self._gear_make.get()
+        self._parent.user_metadata.gear_model = self._gear_model.get()
+        self._parent.user_metadata.gear_type = self._gear_type.get()
+        self._parent.user_metadata.tone_type = self._tone_type.get()
+        self._parent.user_metadata_flag = True
+
         self._root.destroy()
 
 
