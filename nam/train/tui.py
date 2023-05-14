@@ -428,7 +428,7 @@ class _TUI(ttk.Frame):
         print("Exporting...")
         outdir = self.outputFolderName.get()
         print(f"Exporting trained model to {outdir}...")
-        trained_model.net.export(outdir, modelname=modelNameNoExt)
+        trained_model.net.export(outdir, basename=modelNameNoExt)
         print("Done!")
         
     def trainCallback(self):
