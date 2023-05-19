@@ -577,7 +577,7 @@ def _esr(pred: torch.Tensor, target: torch.Tensor) -> float:
     )
 
 
-def _plot(
+def plot(
     model,
     ds,
     window_start: Optional[int] = None,
@@ -618,6 +618,10 @@ def _plot(
         plt.savefig(filepath + ".png")
     if not silent:
         plt.show()
+    else:
+        plt.close()
+
+    return esr
 
 
 def _print_nasty_checks_warning():
@@ -662,6 +666,8 @@ def _nasty_checks_modal():
 # show_modal("Hello, World!")
 
 
+
+
 def train(
     input_path: str,
     output_path: str,
@@ -681,6 +687,7 @@ def train(
     modelname: str = "model",
     ignore_checks: bool = False,
     local: bool = False,
+    callbacks: Optional[pl.callbacks.Callback] = [],
 ) -> Optional[Model]:
     if seed is not None:
         torch.manual_seed(seed)
@@ -735,8 +742,7 @@ def train(
     train_dataloader = DataLoader(dataset_train, **learning_config["train_dataloader"])
     val_dataloader = DataLoader(dataset_validation, **learning_config["val_dataloader"])
 
-    trainer = pl.Trainer(
-        callbacks=[
+    all_cbs = [
             pl.callbacks.model_checkpoint.ModelCheckpoint(
                 filename="checkpoint_best_{epoch:04d}_{step}_{ESR:.4f}_{MSE:.3e}",
                 save_top_k=3,
@@ -745,8 +751,11 @@ def train(
             ),
             pl.callbacks.model_checkpoint.ModelCheckpoint(
                 filename="checkpoint_last_{epoch:04d}_{step}", every_n_epochs=1
-            ),
-        ],
+            )
+        ]
+    all_cbs = all_cbs + callbacks
+    trainer = pl.Trainer(
+        callbacks=all_cbs,
         default_root_dir=train_path,
         **learning_config["trainer"],
     )
@@ -762,29 +771,28 @@ def train(
     model.cpu()
     model.eval()
 
-    def window_kwargs(version: Version):
-        if version.major == 1:
-            return dict(
-                window_start=100_000,  # Start of the plotting window, in samples
-                window_end=101_000,  # End of the plotting window, in samples
-            )
-        elif version.major == 2:
-            # Same validation set even though it's a different spot in the reamp file
-            return dict(
-                window_start=100_000,  # Start of the plotting window, in samples
-                window_end=101_000,  # End of the plotting window, in samples
-            )
-        # Fallback:
+    return {
+        'model': model, 
+        'dataset_validation': dataset_validation,
+        'filepath': train_path + "/" + modelname if save_plot else None,
+        'silent': silent,
+        'args': input_version
+    }
+
+def window_kwargs(version: Version):
+    if version.major == 1:
         return dict(
             window_start=100_000,  # Start of the plotting window, in samples
             window_end=101_000,  # End of the plotting window, in samples
         )
-
-    _plot(
-        model,
-        dataset_validation,
-        filepath=train_path + "/" + modelname if save_plot else None,
-        silent=silent,
-        **window_kwargs(input_version),
+    elif version.major == 2:
+        # Same validation set even though it's a different spot in the reamp file
+        return dict(
+            window_start=100_000,  # Start of the plotting window, in samples
+            window_end=101_000,  # End of the plotting window, in samples
+        )
+    # Fallback:
+    return dict(
+        window_start=100_000,  # Start of the plotting window, in samples
+        window_end=101_000,  # End of the plotting window, in samples
     )
-    return model

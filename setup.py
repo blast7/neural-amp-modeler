@@ -36,8 +36,7 @@ setup(
     include_package_data=True,
     entry_points={
         "console_scripts": [
-            "nam = nam.train.gui:run",
-            "tam = nam.train.tui:run",
+            "nam = nam.train.tui:run",
         ]
     },
 )

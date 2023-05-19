@@ -31,6 +31,7 @@ import json
 from tkinter import ttk
 from tkinter import filedialog as fd
 from tkinter.messagebox import showerror #, showwarning, showinfo
+from nam.train import train_prog as tpg
 
 
 try:
@@ -48,20 +49,6 @@ BUTTON_HEIGHT = 15
 PATH_LABEL_LENGTH = 75
 WORD_WRAP_LENGTH = 450
 DEBUG = False
-
-
-SILENT_RUN_KEY  = 'silentrun'
-SAVE_PLOT_KEY   = 'saveplot'
-TRAINING_EPOCHS_KEY = 'trainingEpochs'
-DELAY_KEY = 'delay'
-MODEL_NAME_KEY = 'modelName'
-OUTPUT_FOLDER_KEY = 'outputFolderName'
-INPUT_SOURCE_FILE_KEY = 'inputSourceFile'
-SELECTED_ARCH_KEY = 'selectedArchitecture'
-CAPTURE_FOLDER_KEY = 'captureFolderName'
-SELECTED_AMP_CAPTURE_KEY = 'selectedAmpCapture'
-SELECTED_THEME_KEY = 'selectedTheme'
-
 
 """
 TODO ... 
@@ -81,73 +68,73 @@ class ConfigParser:
 
     def getConfig(self):
         config = {
-                SILENT_RUN_KEY: False,
-                SAVE_PLOT_KEY: True,
-                TRAINING_EPOCHS_KEY: 100,
-                DELAY_KEY: 0,
-                MODEL_NAME_KEY: "model.nam",
-                OUTPUT_FOLDER_KEY: "",
-                INPUT_SOURCE_FILE_KEY: "",
-                SELECTED_ARCH_KEY: core.Architecture.FEATHER.value,
-                CAPTURE_FOLDER_KEY: "",
-                SELECTED_AMP_CAPTURE_KEY: "",
-                SELECTED_THEME_KEY: ""
+                tpg.SILENT_RUN_KEY: True,
+                tpg.SAVE_PLOT_KEY: True,
+                tpg.TRAINING_EPOCHS_KEY: 100,
+                tpg.DELAY_KEY: 0,
+                tpg.MODEL_NAME_KEY: "model.nam",
+                tpg.OUTPUT_FOLDER_KEY: "",
+                tpg.INPUT_SOURCE_FILE_KEY: "",
+                tpg.SELECTED_ARCH_KEY: core.Architecture.FEATHER.value,
+                tpg.CAPTURE_FOLDER_KEY: "",
+                tpg.SELECTED_AMP_CAPTURE_KEY: "",
+                tpg.SELECTED_THEME_KEY: ""
             }
         if os.path.exists(self.configFile):
             try:
-                config[SILENT_RUN_KEY] = self.data_loaded[SILENT_RUN_KEY]
+                config[tpg.SILENT_RUN_KEY] = self.data_loaded[tpg.SILENT_RUN_KEY]
             except:
-                print("ERROR: unable to read silent run from config file! default value: " + config[SILENT_RUN_KEY])
+                print("ERROR: unable to read silent run from config file! default value: " + config[tpg.SILENT_RUN_KEY])
 
             try:
-                config[SAVE_PLOT_KEY] = self.data_loaded[SAVE_PLOT_KEY]
+                config[tpg.SAVE_PLOT_KEY] = self.data_loaded[tpg.SAVE_PLOT_KEY]
             except:
-                print("ERROR: unable to read save plot from config file! default value: " + config[SAVE_PLOT_KEY])
+                print("ERROR: unable to read save plot from config file! default value: " + config[tpg.SAVE_PLOT_KEY])
 
             try:
-                config[TRAINING_EPOCHS_KEY] = self.data_loaded[TRAINING_EPOCHS_KEY]
+                config[tpg.TRAINING_EPOCHS_KEY] = self.data_loaded[tpg.TRAINING_EPOCHS_KEY]
             except:
-                print("ERROR: unable to read trainging epochs from config file! default value: " + config[TRAINING_EPOCHS_KEY])
+                print("ERROR: unable to read trainging epochs from config file! default value: " + config[tpg.TRAINING_EPOCHS_KEY])
 
             try:
-                config[DELAY_KEY] = self.data_loaded[DELAY_KEY]
+                config[tpg.DELAY_KEY] = self.data_loaded[tpg.DELAY_KEY]
             except:
-                print("ERROR: unable to read delay from config file! default value: " + config[DELAY_KEY])
+                print("ERROR: unable to read delay from config file! default value: " + config[tpg.DELAY_KEY])
 
             try:
-                config[MODEL_NAME_KEY] = self.data_loaded[MODEL_NAME_KEY]
+                config[tpg.MODEL_NAME_KEY] = self.data_loaded[tpg.MODEL_NAME_KEY]
             except:
-                print("ERROR: unable to read model name from config file! default value: " + config[MODEL_NAME_KEY])
+                print("ERROR: unable to read model name from config file! default value: " + config[tpg.MODEL_NAME_KEY])
 
             try:
-                config[OUTPUT_FOLDER_KEY] = self.data_loaded[OUTPUT_FOLDER_KEY]
+                config[tpg.OUTPUT_FOLDER_KEY] = self.data_loaded[tpg.OUTPUT_FOLDER_KEY]
             except:
-                print("ERROR: unable to read output folder from config file! default value: " + config[OUTPUT_FOLDER_KEY])
+                print("ERROR: unable to read output folder from config file! default value: " + config[tpg.OUTPUT_FOLDER_KEY])
 
             try:
-                config[INPUT_SOURCE_FILE_KEY] = self.data_loaded[INPUT_SOURCE_FILE_KEY]
+                config[tpg.INPUT_SOURCE_FILE_KEY] = self.data_loaded[tpg.INPUT_SOURCE_FILE_KEY]
             except:
-                print("ERROR: unable to read input source file from config file! default value: " + config[INPUT_SOURCE_FILE_KEY])
+                print("ERROR: unable to read input source file from config file! default value: " + config[tpg.INPUT_SOURCE_FILE_KEY])
 
             try:
-                config[SELECTED_ARCH_KEY] = self.data_loaded[SELECTED_ARCH_KEY]
+                config[tpg.SELECTED_ARCH_KEY] = self.data_loaded[tpg.SELECTED_ARCH_KEY]
             except:
-                print("ERROR: unable to read selected architecture from config file! default value: " + config[SELECTED_ARCH_KEY])
+                print("ERROR: unable to read selected architecture from config file! default value: " + config[tpg.SELECTED_ARCH_KEY])
 
             try:
-                config[CAPTURE_FOLDER_KEY] = self.data_loaded[CAPTURE_FOLDER_KEY]
+                config[tpg.CAPTURE_FOLDER_KEY] = self.data_loaded[tpg.CAPTURE_FOLDER_KEY]
             except:
-                print("ERROR: unable to read capture folder from config file! default value: " + config[CAPTURE_FOLDER_KEY])
+                print("ERROR: unable to read capture folder from config file! default value: " + config[tpg.CAPTURE_FOLDER_KEY])
 
             try:
-                config[SELECTED_AMP_CAPTURE_KEY] = self.data_loaded[SELECTED_AMP_CAPTURE_KEY]
+                config[tpg.SELECTED_AMP_CAPTURE_KEY] = self.data_loaded[tpg.SELECTED_AMP_CAPTURE_KEY]
             except:
-                print("ERROR: unable to read selected capture from config file! default value: " + config[SELECTED_AMP_CAPTURE_KEY])
+                print("ERROR: unable to read selected capture from config file! default value: " + config[tpg.SELECTED_AMP_CAPTURE_KEY])
 
             try:
-                config[SELECTED_THEME_KEY] = self.data_loaded[SELECTED_THEME_KEY]
+                config[tpg.SELECTED_THEME_KEY] = self.data_loaded[tpg.SELECTED_THEME_KEY]
             except:
-                print("ERROR: unable to read selected theme from config file! default value: " + config[SELECTED_THEME_KEY])
+                print("ERROR: unable to read selected theme from config file! default value: " + config[tpg.SELECTED_THEME_KEY])
         
         return config
 
@@ -160,22 +147,23 @@ class _TUI(ttk.Frame):
         config = ConfigParser(CONFIG_FILE_NAME)
         data_loaded = config.getConfig()
         
-        self.silentrun = tk.BooleanVar(value=data_loaded[SILENT_RUN_KEY])
-        self.saveplot = tk.BooleanVar(value=data_loaded[SAVE_PLOT_KEY])
-        self.trainingEpochs = tk.IntVar(value=data_loaded[TRAINING_EPOCHS_KEY])
-        self.delay = tk.IntVar(value=data_loaded[DELAY_KEY])
-        self.modelName = tk.StringVar(value=data_loaded[MODEL_NAME_KEY])
-        self.outputFolderName = tk.StringVar(value=data_loaded[OUTPUT_FOLDER_KEY])
-        self.inputSourceFile = tk.StringVar(value=data_loaded[INPUT_SOURCE_FILE_KEY])
+        self.root = parent
+        self.silentrun = tk.BooleanVar(value=data_loaded[tpg.SILENT_RUN_KEY])
+        self.saveplot = tk.BooleanVar(value=data_loaded[tpg.SAVE_PLOT_KEY])
+        self.trainingEpochs = tk.IntVar(value=data_loaded[tpg.TRAINING_EPOCHS_KEY])
+        self.delay = tk.IntVar(value=data_loaded[tpg.DELAY_KEY])
+        self.modelName = tk.StringVar(value=data_loaded[tpg.MODEL_NAME_KEY])
+        self.outputFolderName = tk.StringVar(value=data_loaded[tpg.OUTPUT_FOLDER_KEY])
+        self.inputSourceFile = tk.StringVar(value=data_loaded[tpg.INPUT_SOURCE_FILE_KEY])
         self.architectures = [core.Architecture.STANDARD.value,core.Architecture.LITE.value,core.Architecture.FEATHER.value]
-        self.selectedArchitecture = tk.StringVar(value=data_loaded[SELECTED_ARCH_KEY])
+        self.selectedArchitecture = tk.StringVar(value=data_loaded[tpg.SELECTED_ARCH_KEY])
         self.ampCapturesList = tk.Variable()
-        self.captureFolderName = tk.StringVar(value=data_loaded[CAPTURE_FOLDER_KEY])
+        self.captureFolderName = tk.StringVar(value=data_loaded[tpg.CAPTURE_FOLDER_KEY])
         self.selectedAmpCapture = ""
-        self.selectedTheme = tk.StringVar(value=data_loaded[SELECTED_THEME_KEY])
+        self.selectedTheme = tk.StringVar(value=data_loaded[tpg.SELECTED_THEME_KEY])
         self.folder = tk.PhotoImage(file=os.path.join('resources', FOLDER_ICON), width=BUTTON_WIDTH, height=BUTTON_HEIGHT)
         
-        if data_loaded[CAPTURE_FOLDER_KEY] != "":
+        if data_loaded[tpg.CAPTURE_FOLDER_KEY] != "":
             self._parseAmpFolder()
 
         s = ttk.Style()
@@ -187,14 +175,14 @@ class _TUI(ttk.Frame):
         self._createOutputsFrame()
         self._createOptionsFrame()
         self._createThemesFrame()
-        self._createTrainingFrame()       
+        self._createTrainingFrame()
 
         if self.selectedTheme.get() == "":
             self.selectedTheme.set( self.systemThemes[0] )
             s.theme_use( self.systemThemes[0] )
         else:
             s.theme_use( self.selectedTheme.get() )
-        
+
     
     def _createLeftAndRightFrames(self):
         #left side of window
@@ -225,7 +213,7 @@ class _TUI(ttk.Frame):
         self.captureFolderLabel = ttk.Label( self.captureFrame, textvariable=self.captureFolderName, wraplength=WORD_WRAP_LENGTH, width=PATH_LABEL_LENGTH )
         self.captureFolderLabel.grid( row=0, column=1, padx=10, pady=10, sticky="nsew" )
         
-        self.captureList = tk.Listbox( self.captureFrame, listvariable=self.ampCapturesList, exportselection=False )
+        self.captureList = tk.Listbox( self.captureFrame, listvariable=self.ampCapturesList, exportselection=False, selectmode='multiple' )
         self.captureList.grid( row=1, column=0, columnspan=2, padx=10, pady=10, sticky="nsew" )
         self.captureList.bind('<<ListboxSelect>>', self.ampListSelectionCallback)
         
@@ -391,46 +379,6 @@ class _TUI(ttk.Frame):
         if DEBUG: print("windowClosingCallback:")
         self.closeCallback()
 
-    def _train(self):
-        # TODO... implement multi-file training
-        # via multi-file selection in the Amp Capture list
-        #file_list = self._path_button_output.val
-
-        # Advanced-er options
-        # If you're poking around looking for these, then maybe it's time to learn to
-        # use the command-line scripts ;)
-        lr = 0.004
-        lr_decay = 0.007
-        seed = 0
-
-        # Run it
-        #for file in file_list:
-            #print("Now training {}".format(file))
-            #modelname = re.sub(r"\.wav$", "", file.split("/")[-1])
-
-        modelNameNoExt = self.modelName.get().split('.')[0]
-       
-        trained_model = core.train(
-            self.inputSourceFile.get(),
-            os.path.join(self.captureFolderName.get(), self.selectedAmpCapture),
-            self.outputFolderName.get(),
-            epochs=self.trainingEpochs.get(),
-            delay=self.delay.get(),
-            architecture=self.selectedArchitecture.get(),
-            lr=lr,
-            lr_decay=lr_decay,
-            seed=seed,
-            silent=self.silentrun.get(),
-            save_plot=self.saveplot.get(),
-            modelname=modelNameNoExt,
-        )
-        print("Model training complete!")
-        print("Exporting...")
-        outdir = self.outputFolderName.get()
-        print(f"Exporting trained model to {outdir}...")
-        trained_model.net.export(outdir, basename=modelNameNoExt)
-        print("Done!")
-        
     def trainCallback(self):
         if DEBUG: print("trainCallback")
         if DEBUG: print("amp captures folder name: " + self.captureFolderName.get())
@@ -442,7 +390,7 @@ class _TUI(ttk.Frame):
         if DEBUG: print("architecture: " + self.selectedArchitecture.get())
         if DEBUG: print("silent run: " + str(self.silentrun.get()))
         if DEBUG: print("save plot: " + str(self.saveplot.get()))
-        if DEBUG: print("selected amp captures: " + self.selectedAmpCapture)
+        if DEBUG: print("selected amp captures: " + str(self.selectedAmpCapture))
         if DEBUG: print("selected theme: " + str(self.selectedTheme.get()))
         
         self._saveSettings()
@@ -453,7 +401,18 @@ class _TUI(ttk.Frame):
                 title='Error: not ready to train model!',
                 message='You must select an amp capture, an input source, and an output folder in order to train models.')
         else:
-            self._train()
+            tpg.TrainingProgress(parent=self.root, numTrainings=len(self.selectedAmpCapture), config={
+                tpg.SILENT_RUN_KEY: self.silentrun.get(),
+                tpg.SAVE_PLOT_KEY: self.saveplot.get(),
+                tpg.TRAINING_EPOCHS_KEY: self.trainingEpochs.get(),
+                tpg.DELAY_KEY: self.delay.get(),
+                tpg.MODEL_NAME_KEY: self.modelName.get(),
+                tpg.OUTPUT_FOLDER_KEY: self.outputFolderName.get(),
+                tpg.INPUT_SOURCE_FILE_KEY: self.inputSourceFile.get(),
+                tpg.SELECTED_ARCH_KEY: self.selectedArchitecture.get(),
+                tpg.CAPTURE_FOLDER_KEY: self.captureFolderName.get(),
+                tpg.SELECTED_AMP_CAPTURE_KEY: self.selectedAmpCapture
+            })
         
     def closeCallback(self):
         if DEBUG: print("closeCallback")
@@ -492,24 +451,35 @@ class _TUI(ttk.Frame):
         # get all selected indices
         selected_indices = self.captureList.curselection()
         # get selected items
-        selected_items = ",".join([self.captureList.get(i) for i in selected_indices])
-        self.selectedAmpCapture = selected_items
-        self.modelName.set(os.path.basename(self.selectedAmpCapture).split('.')[0] + ".nam")
+        #selected_items = ",".join([self.captureList.get(i) for i in selected_indices])
+        #print(selected_items)
+        self.selectedAmpCapture = [self.captureList.get(i) for i in selected_indices]
+        if len(self.selectedAmpCapture) > 0:
+            self.modelName.set(os.path.basename(self.selectedAmpCapture[0]).split('.')[0] + ".nam")
+        
+        if len(self.selectedAmpCapture) > 1:
+            self.silentrun.set(True)
+            self.silentCheckbox['state'] = 'disabled'
+            self.modelNameEntry['state'] = 'disabled'
+        else:
+            self.silentCheckbox['state'] = 'enabled'
+            self.modelNameEntry['state'] = 'enabled'
+        
         self._saveSettings()
         
     def _saveSettings(self):
         config = {
-            SILENT_RUN_KEY: self.silentrun.get(),
-            SAVE_PLOT_KEY: self.saveplot.get(),
-            TRAINING_EPOCHS_KEY: self.trainingEpochs.get(),
-            DELAY_KEY: self.delay.get(),
-            MODEL_NAME_KEY: self.modelName.get(),
-            OUTPUT_FOLDER_KEY: self.outputFolderName.get(),
-            INPUT_SOURCE_FILE_KEY: self.inputSourceFile.get(),
-            SELECTED_ARCH_KEY: self.selectedArchitecture.get(),
-            CAPTURE_FOLDER_KEY: self.captureFolderName.get(),
-            SELECTED_AMP_CAPTURE_KEY: self.selectedAmpCapture,
-            SELECTED_THEME_KEY: self.selectedTheme.get()
+            tpg.SILENT_RUN_KEY: self.silentrun.get(),
+            tpg.SAVE_PLOT_KEY: self.saveplot.get(),
+            tpg.TRAINING_EPOCHS_KEY: self.trainingEpochs.get(),
+            tpg.DELAY_KEY: self.delay.get(),
+            tpg.MODEL_NAME_KEY: self.modelName.get(),
+            tpg.OUTPUT_FOLDER_KEY: self.outputFolderName.get(),
+            tpg.INPUT_SOURCE_FILE_KEY: self.inputSourceFile.get(),
+            tpg.SELECTED_ARCH_KEY: self.selectedArchitecture.get(),
+            tpg.CAPTURE_FOLDER_KEY: self.captureFolderName.get(),
+            tpg.SELECTED_AMP_CAPTURE_KEY: self.selectedAmpCapture,
+            tpg.SELECTED_THEME_KEY: self.selectedTheme.get()
         }
         with open(CONFIG_FILE_NAME, 'w') as f:
             json.dump(config, f)
@@ -531,7 +501,7 @@ def _install_error():
 def run():
     if _install_is_valid:
         root = tk.Tk()
-        root.title("Neural Amp Modeler")
+        root.title("NAM Trainer Pro")
         
         root.columnconfigure(index=0, weight=1)
         root.columnconfigure(index=1, weight=2)
